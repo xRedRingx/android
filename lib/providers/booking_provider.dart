@@ -1,0 +1,160 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/booking_model.dart';
+import '../models/transaction_model.dart' as TransactionModel; // Use alias to avoid conflict
+import 'auth_provider.dart';
+import 'financials_provider.dart';
+
+class BookingProvider with ChangeNotifier {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AuthProvider? authProvider;
+  final FinancialsProvider? financialsProvider;
+
+  BookingProvider(this.authProvider, this.financialsProvider);
+
+  List<BookingModel> _myCustomerBookings = [];
+  List<BookingModel> get myCustomerBookings => [..._myCustomerBookings];
+
+  // Add this getter that the CustomerDashboard is looking for
+  List<BookingModel> get myBookings => [..._myCustomerBookings];
+
+  List<BookingModel> _myBarberBookings = [];
+  List<BookingModel> get myBarberBookings => [..._myBarberBookings];
+
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+
+  // Fetches bookings for a specific barber on a given day
+  Future<List<DateTime>> fetchBookedSlots(String barberId, DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(Duration(days: 1));
+
+    try {
+      final snapshot = await _firestore
+          .collection('bookings')
+          .where('barberId', isEqualTo: barberId)
+          .where('appointmentTime', isGreaterThanOrEqualTo: startOfDay.toIso8601String())
+          .where('appointmentTime', isLessThan: endOfDay.toIso8601String())
+          .get();
+
+      return snapshot.docs.map((doc) => DateTime.parse(doc['appointmentTime'])).toList();
+    } catch (e) {
+      print('Error fetching booked slots: $e');
+      return [];
+    }
+  }
+
+  // Fetches all bookings for the currently logged-in customer
+  Future<void> fetchMyBookings() async {
+    if (authProvider?.currentUser == null) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await _firestore
+          .collection('bookings')
+          .where('customerId', isEqualTo: authProvider!.currentUser!.id)
+          .orderBy('appointmentTime', descending: true)
+          .get();
+
+      _myCustomerBookings = snapshot.docs
+          .map((doc) => BookingModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+    } catch (e) {
+      print('Error fetching my bookings: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  // Fetches all bookings for the currently logged-in barber
+  Future<void> fetchBarberBookings() async {
+    if (authProvider?.currentUser == null) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final snapshot = await _firestore
+          .collection('bookings')
+          .where('barberId', isEqualTo: authProvider!.currentUser!.id)
+          .orderBy('appointmentTime')
+          .get();
+
+      _myBarberBookings = snapshot.docs
+          .map((doc) => BookingModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
+
+    } catch (e) {
+      print('Error fetching barber bookings: $e');
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<bool> createBooking(BookingModel booking) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final docRef = _firestore.collection('bookings').doc();
+      final newBooking = BookingModel(
+        id: docRef.id,
+        barberId: booking.barberId,
+        barberName: booking.barberName,
+        customerId: authProvider!.currentUser!.id,
+        customerName: authProvider!.currentUser!.name,
+        serviceNames: booking.serviceNames,
+        totalPrice: booking.totalPrice,
+        totalDuration: booking.totalDuration,
+        appointmentTime: booking.appointmentTime,
+      );
+      await docRef.set(newBooking.toMap());
+      await fetchMyBookings();
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('Error creating booking: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Updates a booking's status and creates a transaction if completed
+  Future<void> updateBookingStatus(String bookingId, String status) async {
+    if (authProvider?.currentUser == null) return;
+
+    try {
+      final bookingRef = _firestore.collection('bookings').doc(bookingId);
+      await bookingRef.update({'status': status});
+
+      // Update the local list to reflect the change immediately
+      final index = _myBarberBookings.indexWhere((b) => b.id == bookingId);
+      if (index != -1) {
+        _myBarberBookings[index].status = status;
+
+        // If the booking is marked as 'completed', create a financial transaction
+        if (status == 'completed') {
+          final booking = _myBarberBookings[index];
+          final newTransaction = TransactionModel.Transaction(
+            id: '', // Will be generated by addTransaction method
+            barberId: authProvider!.currentUser!.id,
+            title: 'Service: ${booking.customerName}',
+            category: 'Earnings',
+            amount: booking.totalPrice,
+            date: DateTime.now(),
+            isExpense: false,
+          );
+          // Use the financialsProvider to add the transaction
+          await financialsProvider?.addTransaction(newTransaction);
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      print("Error updating booking status: $e");
+    }
+  }
+}

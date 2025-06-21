@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "651130356443",
+    "project_id": "queueflow-af838",
+    "storage_bucket": "queueflow-af838.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:651130356443:android:af76faff8535d9d114c2fe",
+        "android_client_info": {
+          "package_name": "com.example.barber_flow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdvybIVsmwrWf0V1fDf3ghvR3xHbGnG8c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
