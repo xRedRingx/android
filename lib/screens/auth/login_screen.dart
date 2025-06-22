@@ -7,6 +7,8 @@ import '../../widgets/animated_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -67,8 +69,8 @@ class _LoginScreenState extends State<LoginScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.backgroundColor,
               AppTheme.primaryColor,
+              AppTheme.surfaceColor,
             ],
           ),
         ),

@@ -6,11 +6,11 @@ class AnimatedButton extends StatefulWidget {
   final Duration duration;
 
   const AnimatedButton({
-    Key? key,
+    super.key,
     required this.child,
     this.onPressed,
     this.duration = const Duration(milliseconds: 150),
-  }) : super(key: key);
+  });
 
   @override
   _AnimatedButtonState createState() => _AnimatedButtonState();

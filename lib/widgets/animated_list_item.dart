@@ -7,11 +7,11 @@ class AnimatedListItem extends StatelessWidget {
   final bool isHorizontal;
 
   const AnimatedListItem({
-    Key? key,
+    super.key,
     required this.index,
     required this.child,
     this.isHorizontal = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

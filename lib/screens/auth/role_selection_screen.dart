@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // Import Provider
 import '../../utils/app_theme.dart';
 import '../../widgets/animated_button.dart';
+import '../../providers/notification_provider.dart'; // Import NotificationProvider
 
 class RoleSelectionScreen extends StatefulWidget {
+  const RoleSelectionScreen({super.key});
+
   @override
   _RoleSelectionScreenState createState() => _RoleSelectionScreenState();
 }
@@ -13,10 +17,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _notificationInitialized = false;
 
   @override
   void initState() {
     super.initState();
+
     _fadeController = AnimationController(
       duration: Duration(milliseconds: 1000),
       vsync: this,
@@ -40,6 +46,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Initialize FCM notifications - moved from initState for safer provider access
+    if (!_notificationInitialized) {
+      Provider.of<NotificationProvider>(context, listen: false).initialize();
+      _notificationInitialized = true;
+    }
+  }
+
+  @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
@@ -55,9 +72,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.backgroundColor,
               AppTheme.primaryColor,
-              AppTheme.backgroundColor,
+              AppTheme.surfaceColor,
+              AppTheme.primaryColor,
             ],
             stops: [0.0, 0.5, 1.0],
           ),

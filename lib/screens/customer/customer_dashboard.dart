@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../../models/user_model.dart';
 import '../../models/booking_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/barber_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/animated_button.dart';
+import '../../widgets/animated_list_item.dart';
 
 class CustomerDashboard extends StatefulWidget {
   @override
@@ -23,8 +27,6 @@ class _CustomerDashboardState extends State<CustomerDashboard>
 
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
-  bool _isInitialLoad = true;
-
 
   @override
   void initState() {
@@ -32,33 +34,18 @@ class _CustomerDashboardState extends State<CustomerDashboard>
     _fadeController = AnimationController(
       duration: Duration(milliseconds: 800),
       vsync: this,
-    );
+    )..forward();
     _slideController = AnimationController(
       duration: Duration(milliseconds: 1000),
       vsync: this,
-    );
-
+    )..forward();
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
-
     _slideAnimation = Tween<Offset>(
       begin: Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.elasticOut));
-
-    _fadeController.forward();
-    _slideController.forward();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isInitialLoad) {
-      Provider.of<BarberProvider>(context, listen: false).fetchBarbers();
-      Provider.of<BookingProvider>(context, listen: false).fetchMyBookings();
-      _isInitialLoad = false;
-    }
   }
 
   @override
@@ -67,6 +54,96 @@ class _CustomerDashboardState extends State<CustomerDashboard>
     _slideController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _showRatingDialog(BookingModel booking) {
+    final _commentController = TextEditingController();
+    double _rating = 4.0;
+
+    showDialog(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).cardTheme.color,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text('Rate your experience', style: Theme.of(context).textTheme.headlineMedium),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('How was your appointment with ${booking.barberName}?'),
+                    SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) => IconButton(
+                        icon: Icon(
+                          index < _rating ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 35,
+                        ),
+                        onPressed: () {
+                          setDialogState(() {
+                            _rating = index + 1.0;
+                          });
+                        },
+                      )),
+                    ),
+                    SizedBox(height: 20),
+                    TextField(
+                      controller: _commentController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Leave a comment (optional)',
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(child: Text('Cancel'), onPressed: () => Navigator.of(ctx).pop()),
+                ElevatedButton(
+                  child: Text('Submit Review'),
+                  onPressed: () {
+                    Provider.of<ReviewProvider>(context, listen: false).addReview(
+                      barberId: booking.barberId,
+                      rating: _rating,
+                      comment: _commentController.text,
+                      bookingId: booking.id,
+                    );
+                    Navigator.of(ctx).pop();
+                  },
+                )
+              ],
+            );
+          },
+        )
+    );
+  }
+
+  void _showCancelConfirmationDialog(String bookingId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).cardTheme.color,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Cancel Appointment?'),
+        content: Text('Are you sure you want to cancel this appointment? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            child: Text('No'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          TextButton(
+            child: Text('Yes, Cancel', style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              Provider.of<BookingProvider>(context, listen: false).cancelBooking(bookingId);
+              Navigator.of(ctx).pop();
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -78,8 +155,8 @@ class _CustomerDashboardState extends State<CustomerDashboard>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.backgroundColor,
-              AppTheme.primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).primaryColor,
             ],
           ),
         ),
@@ -142,18 +219,16 @@ class _CustomerDashboardState extends State<CustomerDashboard>
             ),
             Container(
               decoration: BoxDecoration(
-                color: AppTheme.accentColor.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: AppTheme.accentColor, width: 2),
+                border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
               ),
               child: IconButton(
                 icon: Icon(
                   Icons.notifications,
-                  color: AppTheme.accentColor,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                onPressed: () {
-                  // Handle notifications
-                },
+                onPressed: () {},
               ),
             ),
           ],
@@ -202,7 +277,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                   child: _buildQuickActionButton(
                     icon: Icons.search,
                     label: 'Find Barber',
-                    color: AppTheme.accentColor,
+                    color: Theme.of(context).colorScheme.primary,
                     onPressed: () {
                       _pageController.animateToPage(2, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
                     },
@@ -213,7 +288,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                   child: _buildQuickActionButton(
                     icon: Icons.calendar_today,
                     label: 'My Bookings',
-                    color: Colors.orange,
+                    color: Theme.of(context).colorScheme.secondary,
                     onPressed: () {
                       _pageController.animateToPage(1, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
                     },
@@ -261,11 +336,12 @@ class _CustomerDashboardState extends State<CustomerDashboard>
   }
 
   Widget _buildUpcomingAppointmentsCard() {
-    return Consumer<BookingProvider>(
-        builder: (context, bookingProvider, child) {
-          if (bookingProvider.isLoading) return SizedBox.shrink();
+    return StreamBuilder<List<BookingModel>>(
+        stream: Provider.of<BookingProvider>(context).getMyCustomerBookingsStream(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return SizedBox.shrink();
 
-          final upcomingBookings = bookingProvider.myBookings
+          final upcomingBookings = snapshot.data!
               .where((b) => b.appointmentTime.isAfter(DateTime.now()))
               .toList();
 
@@ -280,21 +356,10 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Upcoming Appointments',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
+                      Text('Upcoming', style: Theme.of(context).textTheme.headlineSmall),
                       TextButton(
-                        onPressed: () {
-                          _pageController.animateToPage(1, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-                        },
-                        child: Text(
-                          'View All',
-                          style: TextStyle(color: AppTheme.accentColor),
-                        ),
+                        onPressed: () => _pageController.animateToPage(1, duration: Duration(milliseconds: 300), curve: Curves.easeInOut),
+                        child: Text('View All'),
                       ),
                     ],
                   ),
@@ -304,8 +369,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                     physics: NeverScrollableScrollPhysics(),
                     itemCount: upcomingBookings.length > 2 ? 2 : upcomingBookings.length,
                     itemBuilder: (context, index) {
-                      final booking = upcomingBookings[index];
-                      return _buildAppointmentItem(booking);
+                      return _buildAppointmentItem(upcomingBookings[index]);
                     },
                     separatorBuilder: (context, index) => SizedBox(height: 12),
                   )
@@ -319,90 +383,122 @@ class _CustomerDashboardState extends State<CustomerDashboard>
 
   Widget _buildAppointmentItem(BookingModel booking) {
     Color statusColor;
+    IconData statusIcon;
+    bool showRateButton = false;
+    bool showCancelButton = false;
+
     switch(booking.status) {
+      case 'pending':
       case 'confirmed':
         statusColor = Colors.green;
+        statusIcon = Icons.check_circle_outline;
+        showCancelButton = booking.appointmentTime.isAfter(DateTime.now());
         break;
       case 'completed':
-        statusColor = AppTheme.accentColor;
+        statusColor = Theme.of(context).colorScheme.primary;
+        statusIcon = Icons.check_circle;
+        showRateButton = true;
         break;
       case 'canceled':
         statusColor = Colors.red;
+        statusIcon = Icons.cancel;
+        break;
+      case 'reviewed':
+        statusColor = Colors.amber;
+        statusIcon = Icons.star;
         break;
       default:
         statusColor = Colors.orange;
+        statusIcon = Icons.pending;
     }
 
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.backgroundColor.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Icon(
-              Icons.person,
-              color: statusColor,
-            ),
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: statusColor.withOpacity(0.3), width: 1),
           ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  booking.barberName,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(25),
                 ),
-                Text(
-                  booking.serviceNames.join(', '),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 4),
-                Row(
+                child: Icon(statusIcon, color: statusColor),
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.calendar_today, size: 14, color: AppTheme.textSecondaryColor),
-                    SizedBox(width: 4),
                     Text(
-                      DateFormat('MMM d, yyyy • h:mm a').format(booking.appointmentTime),
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
+                      booking.barberName,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
+                    ),
+                    Text(
+                      booking.serviceNames.join(', '),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 14, color: Theme.of(context).iconTheme.color),
+                        SizedBox(width: 4),
+                        Text(
+                          DateFormat('MMM d, yyyy • h:mm a').format(booking.appointmentTime),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              booking.status.toUpperCase(),
-              style: TextStyle(
-                color: statusColor,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
               ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  booking.status.toUpperCase(),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if(showRateButton)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              child: Text("Rate Appointment"),
+              onPressed: () => _showRatingDialog(booking),
             ),
           ),
-        ],
-      ),
+        if(showCancelButton)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              child: Text("Cancel Appointment", style: TextStyle(color: Colors.red)),
+              onPressed: () => _showCancelConfirmationDialog(booking.id),
+            ),
+          )
+      ],
     );
   }
 
@@ -413,30 +509,25 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Featured Barbers',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
+            Text('Featured Barbers', style: Theme.of(context).textTheme.headlineSmall),
             SizedBox(height: 16),
             Container(
               height: 120,
-              child: Consumer<BarberProvider>(
-                builder: (context, barberProvider, child) {
-                  if (barberProvider.isLoading) {
+              child: StreamBuilder<List<UserModel>>(
+                stream: Provider.of<BarberProvider>(context).getBarbersStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
                   }
-                  if (barberProvider.barbers.isEmpty) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return Center(child: Text("No barbers available.", style: Theme.of(context).textTheme.bodyMedium));
                   }
+                  final barbers = snapshot.data!;
                   return ListView.builder(
                     scrollDirection: Axis.horizontal,
-                    itemCount: barberProvider.barbers.length > 3 ? 3 : barberProvider.barbers.length, // Show max 3
+                    itemCount: barbers.length > 3 ? 3 : barbers.length,
                     itemBuilder: (context, index) {
-                      final barber = barberProvider.barbers[index];
-                      return _buildBarberCard(barber: barber);
+                      return _buildBarberCard(barber: barbers[index]);
                     },
                   );
                 },
@@ -458,17 +549,17 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         margin: EdgeInsets.only(right: 12),
         padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppTheme.backgroundColor.withOpacity(0.3),
+          color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.3),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.accentColor.withOpacity(0.2), width: 1),
+          border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.2), width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 25,
-              backgroundColor: AppTheme.accentColor.withOpacity(0.2),
-              child: Icon(Icons.person, color: AppTheme.accentColor),
+              backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+              child: Icon(Icons.person, color: Theme.of(context).colorScheme.primary),
             ),
             SizedBox(height: 8),
             Text(
@@ -489,13 +580,13 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                 SizedBox(width: 2),
                 Text(
                   "4.8", // Mock rating
-                  style: TextStyle(fontSize: 10, color: AppTheme.textSecondaryColor),
+                  style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodyMedium?.color),
                 ),
               ],
             ),
             Text(
               barber.specialties?.isNotEmpty ?? false ? barber.specialties!.first : 'Top Stylist',
-              style: TextStyle(fontSize: 10, color: AppTheme.textSecondaryColor),
+              style: TextStyle(fontSize: 10, color: Theme.of(context).textTheme.bodyMedium?.color),
               textAlign: TextAlign.center,
             ),
           ],
@@ -505,28 +596,33 @@ class _CustomerDashboardState extends State<CustomerDashboard>
   }
 
   Widget _buildBookingsTab() {
-    return Consumer<BookingProvider>(
-      builder: (context, bookingProvider, child) {
-        if (bookingProvider.isLoading) {
+    return StreamBuilder<List<BookingModel>>(
+      stream: Provider.of<BookingProvider>(context).getMyCustomerBookingsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
         }
-        if (bookingProvider.myBookings.isEmpty) {
+        if (snapshot.hasError) {
+          return Center(child: Text("Error fetching bookings."));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.calendar_month, size: 80, color: AppTheme.textSecondaryColor),
+                Icon(Icons.calendar_month, size: 80, color: Theme.of(context).textTheme.bodyMedium?.color),
                 SizedBox(height: 20),
-                Text('No bookings yet.', style: Theme.of(context).textTheme.headlineSmall),
+                Text('No bookings yet.', style: Theme.of(context).textTheme.headlineMedium),
                 SizedBox(height: 8),
-                Text("Your appointments will appear here.", style: Theme.of(context).textTheme.bodyMedium),
+                Text("Your new appointments will appear here.", style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
           );
         }
 
-        final upcoming = bookingProvider.myBookings.where((b) => b.appointmentTime.isAfter(DateTime.now())).toList();
-        final past = bookingProvider.myBookings.where((b) => b.appointmentTime.isBefore(DateTime.now())).toList();
+        final bookings = snapshot.data!;
+        final upcoming = bookings.where((b) => b.appointmentTime.isAfter(DateTime.now())).toList();
+        final past = bookings.where((b) => b.appointmentTime.isBefore(DateTime.now())).toList();
 
         return ListView(
           padding: EdgeInsets.all(24),
@@ -534,18 +630,24 @@ class _CustomerDashboardState extends State<CustomerDashboard>
             Text('Upcoming', style: Theme.of(context).textTheme.headlineMedium),
             SizedBox(height: 16),
             if (upcoming.isEmpty)
-              Text("You have no upcoming appointments.", style: Theme.of(context).textTheme.bodyMedium),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Text("You have no upcoming appointments.", style: Theme.of(context).textTheme.bodyMedium),
+              ),
             ...upcoming.map((booking) => Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
+              padding: const EdgeInsets.only(bottom: 16.0),
               child: _buildAppointmentItem(booking),
             )),
             SizedBox(height: 32),
             Text('Past', style: Theme.of(context).textTheme.headlineMedium),
             SizedBox(height: 16),
             if (past.isEmpty)
-              Text("You have no past appointments.", style: Theme.of(context).textTheme.bodyMedium),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Text("You have no past appointments.", style: Theme.of(context).textTheme.bodyMedium),
+              ),
             ...past.map((booking) => Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
+              padding: const EdgeInsets.only(bottom: 16.0),
               child: _buildAppointmentItem(booking),
             )),
           ],
@@ -560,76 +662,78 @@ class _CustomerDashboardState extends State<CustomerDashboard>
       children: [
         Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Text(
-            'Find Barbers',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          child: Text('Find Barbers', style: Theme.of(context).textTheme.headlineMedium),
         ),
         Expanded(
-          child: Consumer<BarberProvider>(
-            builder: (context, barberProvider, child) {
-              if (barberProvider.isLoading) {
+          child: StreamBuilder<List<UserModel>>(
+            stream: Provider.of<BarberProvider>(context).getBarbersStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
               }
-              if (barberProvider.barbers.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return Center(
                   child: Text("No barbers available right now.", style: Theme.of(context).textTheme.bodyLarge),
                 );
               }
-              return ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                itemCount: barberProvider.barbers.length,
-                itemBuilder: (ctx, index) {
-                  final barber = barberProvider.barbers[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: AppTheme.accentColor.withOpacity(0.2),
-                            child: Icon(Icons.person, size: 30, color: AppTheme.accentColor),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(barber.name, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4),
-                                Text(
-                                  barber.specialties?.join(', ') ?? 'Top Stylist',
-                                  style: Theme.of(context).textTheme.bodyMedium,
+              final barbers = snapshot.data!;
+              return AnimationLimiter(
+                child: ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: barbers.length,
+                  itemBuilder: (ctx, index) {
+                    final barber = barbers[index];
+                    return AnimatedListItem(
+                      index: index,
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 30,
+                                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                                child: Icon(Icons.person, size: 30, color: Theme.of(context).colorScheme.primary),
+                              ),
+                              SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(barber.name, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      barber.specialties?.join(', ') ?? 'Top Stylist',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: List.generate(5, (i) => Icon(
+                                        i < 4 ? Icons.star : Icons.star_border, // Mock rating
+                                        color: Colors.amber,
+                                        size: 16,
+                                      )),
+                                    ),
+                                  ],
                                 ),
-                                SizedBox(height: 8),
-                                Row(
-                                  children: List.generate(5, (i) => Icon(
-                                    i < 4 ? Icons.star : Icons.star_border, // Mock rating
-                                    color: Colors.amber,
-                                    size: 16,
-                                  )),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context).pushNamed('/barber-profile', arguments: barber);
+                                },
+                                child: Text('Book'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                                 ),
-                              ],
-                            ),
+                              )
+                            ],
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed('/barber-profile', arguments: barber);
-                            },
-                            child: Text('Book'),
-                            style: ElevatedButton.styleFrom(
-                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            ),
-                          )
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               );
             },
           ),
@@ -646,9 +750,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         children: [
           Text(
             'Profile',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            style: Theme.of(context).textTheme.headlineMedium,
           ),
           SizedBox(height: 24),
           Card(
@@ -662,20 +764,17 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundColor: AppTheme.accentColor.withOpacity(0.2),
+                            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                             child: Icon(
                               Icons.person,
                               size: 40,
-                              color: AppTheme.accentColor,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                           SizedBox(height: 16),
                           Text(
                             authProvider.currentUser?.name ?? 'User',
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                            ),
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Theme.of(context).textTheme.headlineLarge?.color),
                           ),
                           SizedBox(height: 4),
                           Text(
@@ -690,24 +789,36 @@ class _CustomerDashboardState extends State<CustomerDashboard>
                   _buildProfileOption(
                     icon: Icons.edit,
                     title: 'Edit Profile',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.of(context).pushNamed('/edit-profile');
+                    },
                   ),
                   _buildProfileOption(
                     icon: Icons.history,
                     title: 'Booking History',
-                    onTap: () {},
+                    onTap: () {
+                      _pageController.animateToPage(1, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+                    },
                   ),
                   _buildProfileOption(
                     icon: Icons.favorite,
                     title: 'Favorite Barbers',
                     onTap: () {},
                   ),
-                  _buildProfileOption(
-                    icon: Icons.settings,
-                    title: 'Settings',
-                    onTap: () {},
+                  Divider(),
+                  Consumer<ThemeProvider>(
+                    builder: (context, themeProvider, child) {
+                      return SwitchListTile(
+                        title: Text("Dark Mode", style: Theme.of(context).textTheme.bodyLarge),
+                        value: themeProvider.themeMode == ThemeMode.dark,
+                        onChanged: (value) {
+                          themeProvider.toggleTheme();
+                        },
+                        secondary: Icon(Icons.dark_mode_outlined, color: Theme.of(context).colorScheme.primary),
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      );
+                    },
                   ),
-                  SizedBox(height: 16),
                   Divider(),
                   SizedBox(height: 16),
                   Consumer<AuthProvider>(
@@ -764,12 +875,12 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         padding: EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: AppTheme.backgroundColor.withOpacity(0.3),
+          color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.3),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.accentColor),
+            Icon(icon, color: Theme.of(context).colorScheme.secondary),
             SizedBox(width: 16),
             Text(
               title,
@@ -778,7 +889,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
             Spacer(),
             Icon(
               Icons.arrow_forward_ios,
-              color: AppTheme.textSecondaryColor,
+              color: Theme.of(context).iconTheme.color,
               size: 16,
             ),
           ],
@@ -790,7 +901,7 @@ class _CustomerDashboardState extends State<CustomerDashboard>
   Widget _buildBottomNavigationBar() {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: Theme.of(context).cardTheme.color,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -810,8 +921,8 @@ class _CustomerDashboardState extends State<CustomerDashboard>
         backgroundColor: Colors.transparent,
         elevation: 0,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.accentColor,
-        unselectedItemColor: AppTheme.textSecondaryColor,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).iconTheme.color,
         selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         unselectedLabelStyle: TextStyle(fontWeight: FontWeight.normal, fontSize: 12),
         items: const [

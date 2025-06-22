@@ -8,7 +8,8 @@ class UserModel {
   final UserRole role;
   final String? bio;
   final List<String>? specialties;
-  final Map<String, dynamic>? schedule; // Added schedule property
+  final Map<String, dynamic>? schedule;
+  final String? fcmToken; // Added fcmToken
 
   UserModel({
     required this.id,
@@ -18,7 +19,8 @@ class UserModel {
     required this.role,
     this.bio,
     this.specialties,
-    this.schedule, // Added to constructor
+    this.schedule,
+    this.fcmToken, // Added to constructor
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
@@ -30,7 +32,8 @@ class UserModel {
       role: UserRole.values[map['role'] ?? 0],
       bio: map['bio'],
       specialties: List<String>.from(map['specialties'] ?? []),
-      schedule: map['schedule'] != null ? Map<String, dynamic>.from(map['schedule']) : null, // Handle schedule
+      schedule: map['schedule'] != null ? Map<String, dynamic>.from(map['schedule']) : null,
+      fcmToken: map['fcmToken'], // Handle fcmToken
     );
   }
 
@@ -43,7 +46,8 @@ class UserModel {
       'role': role.index,
       'bio': bio,
       'specialties': specialties,
-      'schedule': schedule, // Add to map
+      'schedule': schedule,
+      'fcmToken': fcmToken, // Add to map
     };
   }
 }

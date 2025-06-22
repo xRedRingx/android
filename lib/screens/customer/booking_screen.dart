@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 import '../../models/user_model.dart';
 import '../../models/service_model.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
+import '../../providers/schedule_provider.dart';
 import '../../utils/app_theme.dart';
 import '../../widgets/animated_button.dart';
 
 class BookingScreen extends StatefulWidget {
+  const BookingScreen({super.key});
+
   @override
   _BookingScreenState createState() => _BookingScreenState();
 }
@@ -24,13 +28,26 @@ class _BookingScreenState extends State<BookingScreen> {
 
   List<TimeOfDay> _availableSlots = [];
   bool _isLoadingSlots = false;
+  bool _isInit = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    barber = arguments['barber'];
-    selectedServices = arguments['services'];
+    if (_isInit) {
+      final arguments = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      barber = arguments['barber'];
+      selectedServices = arguments['services'];
+      _fetchScheduleData();
+    }
+    _isInit = false;
+  }
+
+  Future<void> _fetchScheduleData() async {
+    final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+    await Future.wait([
+      scheduleProvider.fetchScheduleForBarber(barber.id),
+      scheduleProvider.fetchUnavailableDatesForBarber(barber.id),
+    ]);
   }
 
   Future<void> _updateAvailableSlots(DateTime day) async {
@@ -41,14 +58,34 @@ class _BookingScreenState extends State<BookingScreen> {
     });
 
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final scheduleProvider = Provider.of<ScheduleProvider>(context, listen: false);
+    final schedule = scheduleProvider.getViewedSchedule(barber.id);
+    final dayOfWeek = DateFormat('EEEE').format(day);
+    final daySchedule = schedule[dayOfWeek];
+
+    if (daySchedule == null || daySchedule.isDayOff) {
+      setState(() => _isLoadingSlots = false);
+      return; // Barber does not work on this day
+    }
+
     final bookedSlots = await bookingProvider.fetchBookedSlots(barber.id, day);
 
-    // This is a simplified slot generation logic.
-    // A real app would use the barber's actual schedule from Firestore.
     List<TimeOfDay> potentialSlots = [];
-    for (int hour = 9; hour < 18; hour++) {
-      potentialSlots.add(TimeOfDay(hour: hour, minute: 0));
-      potentialSlots.add(TimeOfDay(hour: hour, minute: 30));
+    final startTimeParts = daySchedule.startTime.split(':');
+    final endTimeParts = daySchedule.endTime.split(':');
+    final startHour = int.parse(startTimeParts[0]);
+    final startMinute = int.parse(startTimeParts[1]);
+    final endHour = int.parse(endTimeParts[0]);
+    final endMinute = int.parse(endTimeParts[1]);
+
+    TimeOfDay currentTime = TimeOfDay(hour: startHour, minute: startMinute);
+    final endTime = TimeOfDay(hour: endHour, minute: endMinute);
+
+    while (currentTime.hour < endTime.hour || (currentTime.hour == endTime.hour && currentTime.minute < endTime.minute)) {
+      potentialSlots.add(currentTime);
+      // Increment by 30 minutes for each slot
+      final newMinutes = currentTime.minute + 30;
+      currentTime = TimeOfDay(hour: currentTime.hour + newMinutes ~/ 60, minute: newMinutes % 60);
     }
 
     _availableSlots = potentialSlots.where((slot) {
@@ -112,7 +149,7 @@ class _BookingScreenState extends State<BookingScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.backgroundColor, AppTheme.primaryColor],
+            colors: [AppTheme.primaryColor, AppTheme.surfaceColor],
           ),
         ),
         child: Column(
@@ -127,49 +164,69 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildCalendar() {
-    return Card(
-      margin: const EdgeInsets.all(16.0),
-      child: TableCalendar(
-        firstDay: DateTime.now(),
-        lastDay: DateTime.now().add(Duration(days: 60)),
-        focusedDay: _focusedDay,
-        calendarFormat: _calendarFormat,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selectedDay, focusedDay) {
-          if (!isSameDay(_selectedDay, selectedDay)) {
-            setState(() {
-              _selectedDay = selectedDay;
+    return Consumer<ScheduleProvider>(
+      builder: (context, scheduleProvider, child) {
+        final unavailableDates = scheduleProvider.getViewedUnavailableDates(barber.id);
+        final schedule = scheduleProvider.getViewedSchedule(barber.id);
+
+        return Card(
+          margin: const EdgeInsets.all(16.0),
+          child: TableCalendar(
+            firstDay: DateTime.now(),
+            lastDay: DateTime.now().add(Duration(days: 60)),
+            focusedDay: _focusedDay,
+            calendarFormat: _calendarFormat,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            enabledDayPredicate: (day) {
+              // Check if the date is in the unavailable list
+              final isUnavailable = unavailableDates.any((d) => isSameDay(d, day));
+              if (isUnavailable) return false;
+
+              // Check if the day of the week is a day off
+              final dayOfWeek = DateFormat('EEEE').format(day);
+              final daySchedule = schedule[dayOfWeek];
+              if (daySchedule == null || daySchedule.isDayOff) return false;
+
+              return true;
+            },
+            onDaySelected: (selectedDay, focusedDay) {
+              if (!isSameDay(_selectedDay, selectedDay)) {
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+                _updateAvailableSlots(selectedDay);
+              }
+            },
+            onFormatChanged: (format) {
+              if (_calendarFormat != format) {
+                setState(() => _calendarFormat = format);
+              }
+            },
+            onPageChanged: (focusedDay) {
               _focusedDay = focusedDay;
-            });
-            _updateAvailableSlots(selectedDay);
-          }
-        },
-        onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            setState(() => _calendarFormat = format);
-          }
-        },
-        onPageChanged: (focusedDay) {
-          _focusedDay = focusedDay;
-        },
-        calendarStyle: CalendarStyle(
-          todayDecoration: BoxDecoration(
-            color: AppTheme.accentColor.withOpacity(0.5),
-            shape: BoxShape.circle,
+            },
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(
+                color: AppTheme.accentColor.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: AppTheme.accentColor,
+                shape: BoxShape.circle,
+              ),
+              disabledTextStyle: TextStyle(color: AppTheme.textSecondaryColor.withOpacity(0.3)),
+            ),
+            headerStyle: HeaderStyle(
+              formatButtonDecoration: BoxDecoration(
+                color: AppTheme.accentColor,
+                borderRadius: BorderRadius.circular(20.0),
+              ),
+              formatButtonTextStyle: TextStyle(color: Colors.white),
+            ),
           ),
-          selectedDecoration: BoxDecoration(
-            color: AppTheme.accentColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        headerStyle: HeaderStyle(
-          formatButtonDecoration: BoxDecoration(
-            color: AppTheme.accentColor,
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          formatButtonTextStyle: TextStyle(color: Colors.white),
-        ),
-      ),
+        );
+      },
     );
   }
 

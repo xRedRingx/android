@@ -11,7 +11,7 @@ class ServicesProvider with ChangeNotifier {
   // Stores services for the logged-in barber
   List<BarberService> _myServices = [];
   // Stores services for any barber being viewed by a customer
-  Map<String, List<BarberService>> _viewedBarberServices = {};
+  final Map<String, List<BarberService>> _viewedBarberServices = {};
 
   ServicesProvider(this._authProvider) {
     if (_authProvider?.currentUser != null && _authProvider?.currentUser?.role == UserRole.barber) {
@@ -24,6 +24,35 @@ class ServicesProvider with ChangeNotifier {
 
   String? get _userId => _authProvider?.currentUser?.id;
 
+  Stream<List<BarberService>> getMyServicesStream() {
+    if (_userId == null) {
+      return Stream.value([]);
+    }
+    return _firestore
+        .collection('users')
+        .doc(_userId)
+        .collection('services')
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => BarberService.fromMap(doc.data()))
+        .toList());
+  }
+
+  Stream<List<BarberService>> getServicesForBarberStream(String barberId) {
+    if (barberId.isEmpty) {
+      return Stream.value([]);
+    }
+    return _firestore
+        .collection('users')
+        .doc(barberId)
+        .collection('services')
+        .orderBy('name')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+        .map((doc) => BarberService.fromMap(doc.data()))
+        .toList());
+  }
   // Fetches services for the logged-in barber
   Future<void> fetchServices() async {
     if (_userId == null) return;
@@ -67,15 +96,33 @@ class ServicesProvider with ChangeNotifier {
 
   Future<void> addService(BarberService service) async {
     if (_userId == null) return;
-
     try {
       final newServiceRef = _firestore.collection('users').doc(_userId).collection('services').doc();
       service.id = newServiceRef.id;
       await newServiceRef.set(service.toMap());
-      _myServices.add(service);
-      notifyListeners();
+      // No need to call notifyListeners() as the stream will update the UI
     } catch (error) {
       print("Error adding service: $error");
+    }
+  }
+
+  // --- NEW METHOD TO UPDATE A SERVICE ---
+  Future<void> updateService(BarberService service) async {
+    if (_userId == null || service.id == null) return;
+    try {
+      await _firestore.collection('users').doc(_userId).collection('services').doc(service.id).update(service.toMap());
+    } catch (error) {
+      print("Error updating service: $error");
+    }
+  }
+
+  // --- NEW METHOD TO DELETE A SERVICE ---
+  Future<void> deleteService(String serviceId) async {
+    if (_userId == null) return;
+    try {
+      await _firestore.collection('users').doc(_userId).collection('services').doc(serviceId).delete();
+    } catch (error) {
+      print("Error deleting service: $error");
     }
   }
 }

@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import '../models/schedule_model.dart'; // Import the schedule model
+import '../models/schedule_model.dart';
+import './notification_provider.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationProvider _notificationProvider = NotificationProvider();
 
   UserModel? _currentUser;
-  bool _isLoading = false;
+  bool _isLoading = false; // For login/register process
+  bool _isAuthLoading = true; // For initial app startup check
   String? _errorMessage;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get isAuthLoading => _isAuthLoading; // New getter
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _currentUser != null;
 
@@ -25,12 +29,31 @@ class AuthProvider with ChangeNotifier {
     if (firebaseUser == null) {
       _currentUser = null;
     } else {
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-      if (userDoc.exists) {
-        _currentUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
-      }
+      await _fetchUserProfile(firebaseUser.uid);
+      await _saveDeviceToken(firebaseUser.uid);
+    }
+
+    // After the first check completes, set loading to false.
+    if (_isAuthLoading) {
+      _isAuthLoading = false;
     }
     notifyListeners();
+  }
+
+  Future<void> _fetchUserProfile(String uid) async {
+    DocumentSnapshot userDoc = await _firestore.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      _currentUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+    }
+  }
+
+  Future<void> _saveDeviceToken(String uid) async {
+    String? token = await _notificationProvider.getToken();
+    if (token != null) {
+      await _firestore.collection('users').doc(uid).update({
+        'fcmToken': token,
+      });
+    }
   }
 
   Future<bool> login(String email, String password, UserRole role) async {
@@ -51,7 +74,6 @@ class AuthProvider with ChangeNotifier {
       }
 
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-
       _isLoading = false;
       notifyListeners();
       return true;
@@ -82,7 +104,6 @@ class AuthProvider with ChangeNotifier {
       User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
-        // --- Create a default schedule for new barbers ---
         Map<String, dynamic>? defaultSchedule;
         if (role == UserRole.barber) {
           defaultSchedule = {
@@ -102,7 +123,7 @@ class AuthProvider with ChangeNotifier {
           name: name,
           phone: '',
           role: role,
-          schedule: defaultSchedule, // Add schedule to user model
+          schedule: defaultSchedule,
         );
 
         await _firestore.collection('users').doc(firebaseUser.uid).set(newUser.toMap());
@@ -121,6 +142,18 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> updateUserProfile(Map<String, dynamic> data) async {
+    if (_currentUser == null) return;
+
+    try {
+      await _firestore.collection('users').doc(_currentUser!.id).update(data);
+      await _fetchUserProfile(_currentUser!.id);
+      notifyListeners();
+    } catch (e) {
+      print("Error updating user profile: $e");
     }
   }
 

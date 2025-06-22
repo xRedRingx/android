@@ -7,6 +7,8 @@ import '../../widgets/animated_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -100,8 +102,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.backgroundColor,
               AppTheme.primaryColor,
+              AppTheme.surfaceColor,
             ],
           ),
         ),
