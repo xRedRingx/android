@@ -297,7 +297,7 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: Theme.of(context).cardTheme.color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Edit Service', style: Theme.of(context).textTheme.headlineMedium),
         content: Form(
@@ -325,7 +325,7 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
                   builder: (deleteCtx) => AlertDialog(
                     title: Text('Are you sure?'),
                     content: Text('Do you want to permanently delete the "${serviceToEdit.name}" service?'),
-                    backgroundColor: AppTheme.surfaceColor,
+                    backgroundColor: Theme.of(context).cardTheme.color,
                     actions: [
                       TextButton(child: Text('No'), onPressed: () => Navigator.of(deleteCtx).pop()),
                       TextButton(
@@ -341,7 +341,7 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
           ),
           Spacer(),
           TextButton(
-            child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondaryColor)),
+            child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.labelLarge?.color)),
             onPressed: () => Navigator.of(ctx).pop(),
           ),
           ElevatedButton(
@@ -378,7 +378,7 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
             final bookingProvider = Provider.of<BookingProvider>(context);
 
             return AlertDialog(
-              backgroundColor: AppTheme.surfaceColor,
+              backgroundColor: Theme.of(context).cardTheme.color,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: Text('Add Walk-in', style: Theme.of(context).textTheme.headlineMedium),
               content: Form(
@@ -409,10 +409,10 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
                                 }
                               });
                             },
-                            backgroundColor: AppTheme.primaryColor,
-                            selectedColor: AppTheme.accentColor,
-                            checkmarkColor: AppTheme.textColor,
-                            labelStyle: TextStyle(color: AppTheme.textColor),
+                            // backgroundColor: AppTheme.primaryColor, // Rely on ChipThemeData
+                            // selectedColor: AppTheme.accentColor, // Rely on ChipThemeData
+                            // checkmarkColor: AppTheme.textColor, // Rely on ChipThemeData
+                            // labelStyle: TextStyle(color: AppTheme.textColor), // Rely on ChipThemeData
                           );
                         }).toList(),
                       ),
@@ -422,7 +422,7 @@ class _BarberDashboardState extends State<BarberDashboard> with TickerProviderSt
               ),
               actions: [
                 TextButton(
-                  child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondaryColor)),
+                  child: Text('Cancel', style: TextStyle(color: Theme.of(context).textTheme.labelLarge?.color)),
                   onPressed: () => Navigator.of(ctx).pop(),
                 ),
                 ElevatedButton(

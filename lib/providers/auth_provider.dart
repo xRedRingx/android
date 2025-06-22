@@ -62,28 +62,67 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      QuerySnapshot userQuery = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .where('role', isEqualTo: role.index)
-          .limit(1)
-          .get();
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(email: email, password: password);
+      User? firebaseUser = userCredential.user;
 
-      if (userQuery.docs.isEmpty) {
-        throw FirebaseAuthException(code: 'user-not-found', message: 'No user found for that role.');
+      if (firebaseUser == null) {
+        // This case should ideally be caught by FirebaseAuthException if signIn fails
+        _errorMessage = "Authentication failed. User not found.";
+        _isLoading = false;
+        notifyListeners();
+        return false;
       }
 
-      await _auth.signInWithEmailAndPassword(email: email, password: password);
+      // Directly fetch the user profile to ensure we have it before proceeding
+      DocumentSnapshot userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+
+      if (!userDoc.exists) {
+        // User authenticated with Firebase, but no profile in Firestore.
+        await _auth.signOut(); // Important: sign them out
+        _currentUser = null; // Clear any stale current user
+        _errorMessage = "Your account exists but profile data is missing. Please register or contact support.";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      UserModel tempUser = UserModel.fromMap(userDoc.data() as Map<String, dynamic>);
+
+      if (tempUser.role != role) {
+        await _auth.signOut(); // Sign out if role does not match
+        _currentUser = null; // Clear any stale current user
+        _errorMessage = "Role mismatch. You logged in as a ${tempUser.role.toString().split('.').last}, but selected ${role.toString().split('.').last}. Please select the correct role.";
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // If role matches, update _currentUser and save device token
+      // _onAuthStateChanged will also set _currentUser, but this ensures it's set before login returns true
+      _currentUser = tempUser;
+      await _saveDeviceToken(firebaseUser.uid); // Explicitly save/update token
+
       _isLoading = false;
+      // _onAuthStateChanged will also call notifyListeners(), but one here is fine.
       notifyListeners();
       return true;
+
     } on FirebaseAuthException catch (e) {
-      _errorMessage = e.message ?? "An unknown error occurred.";
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential' || e.code == 'INVALID_LOGIN_CREDENTIALS') {
+        _errorMessage = "Invalid email or password.";
+      } else if (e.code == 'user-disabled') {
+        _errorMessage = "This account has been disabled.";
+      } else if (e.code == 'invalid-email') {
+        _errorMessage = "The email address is badly formatted.";
+      }
+      else {
+        _errorMessage = "Login failed: ${e.message}";
+      }
       _isLoading = false;
       notifyListeners();
       return false;
     } catch (e) {
-      _errorMessage = "An unexpected error occurred. Please try again.";
+      _errorMessage = "An unexpected error occurred during login.";
       _isLoading = false;
       notifyListeners();
       return false;

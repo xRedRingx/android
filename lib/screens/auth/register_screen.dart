@@ -68,24 +68,46 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
   }
 
   Future<void> _handleRegister() async {
-    if (_formKey.currentState?.validate() ?? false) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userRole = _userRole == 'customer' ? UserRole.customer : UserRole.barber;
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
 
-      final success = await authProvider.register(
-        _emailController.text.trim(),
-        _passwordController.text.trim(),
-        _nameController.text.trim(),
-        userRole,
-      );
+    // Ensure _userRole (from arguments) is valid before proceeding
+    final String? roleArgument = _userRole; // _userRole is already populated from didChangeDependencies
 
-      if (success && mounted) {
-        final route = userRole == UserRole.customer ? '/customer-dashboard' : '/barber-dashboard';
-        Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
-      } else if (mounted) {
+    if (roleArgument == null || (roleArgument != 'customer' && roleArgument != 'barber')) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed. Please try again.'),
+            content: Text('Error: User role not specified or invalid. Please select a role first.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        // Navigate back to role selection or a safe place
+        // Assuming '/role-selection' is a named route that's always available in the stack before login/register
+        Navigator.popUntil(context, ModalRoute.withName('/role-selection'));
+      }
+      return;
+    }
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    // Now we are sure roleArgument is either 'customer' or 'barber'
+    final userRoleEnum = roleArgument == 'customer' ? UserRole.customer : UserRole.barber;
+
+    final success = await authProvider.register(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+      _nameController.text.trim(),
+      userRoleEnum, // Use the validated enum
+    );
+
+    if (success && mounted) {
+      final route = userRoleEnum == UserRole.customer ? '/customer-dashboard' : '/barber-dashboard';
+      Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Registration failed. Please try again.'),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -102,8 +124,8 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.primaryColor,
-              AppTheme.surfaceColor,
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).colorScheme.surface,
             ],
           ),
         ),
@@ -120,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                       Icon(
                         _userRole == 'customer' ? Icons.person_add : Icons.store,
                         size: 80,
-                        color: AppTheme.accentColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -199,7 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword ? Icons.visibility : Icons.visibility_off,
-                                  color: AppTheme.textSecondaryColor,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -226,7 +248,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                                  color: AppTheme.textSecondaryColor,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -255,14 +277,14 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
                                         colors: [
-                                          AppTheme.accentColor,
+                                          Theme.of(context).colorScheme.primary,
                                           Colors.pinkAccent,
                                         ],
                                       ),
                                       borderRadius: BorderRadius.circular(25),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppTheme.accentColor.withOpacity(0.3),
+                                          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                                           blurRadius: 15,
                                           spreadRadius: 2,
                                           offset: Offset(0, 8),
@@ -277,7 +299,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor: AlwaysStoppedAnimation<Color>(
-                                            AppTheme.textColor,
+                                            Theme.of(context).colorScheme.onPrimary,
                                           ),
                                         ),
                                       )
@@ -286,7 +308,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.textColor,
+                                          color: Theme.of(context).colorScheme.onPrimary,
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
@@ -308,7 +330,7 @@ class _RegisterScreenState extends State<RegisterScreen> with TickerProviderStat
                                     TextSpan(
                                       text: 'Sign In',
                                       style: TextStyle(
-                                        color: AppTheme.accentColor,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),

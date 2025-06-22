@@ -67,11 +67,18 @@ class BarberFlowApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
+          // Initialize theme when the provider is first accessed here
+          if (!themeProvider.isInitialized) {
+            // Using a FutureBuilder or similar might be better if initializeTheme
+            // needs to complete before building, but for now, this will trigger loading.
+            // Consider moving initialization to an earlier point if it causes flashes.
+            themeProvider.initializeTheme();
+          }
           return MaterialApp(
             title: 'BarberFlow',
-            theme: AppTheme.lightTheme,  // Changed from boldTheme to lightTheme
-            darkTheme: AppTheme.darkTheme, // Optional: add dark theme support
-            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light, // Optional: use theme provider
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode, // Use themeProvider.themeMode directly
             debugShowCheckedModeBanner: false,
             home: AuthWrapper(),
             onGenerateRoute: (settings) {

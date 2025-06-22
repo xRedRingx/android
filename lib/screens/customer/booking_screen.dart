@@ -142,14 +142,14 @@ class _BookingScreenState extends State<BookingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Book with ${barber.name}'),
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.primaryColor, AppTheme.surfaceColor],
+            colors: [Theme.of(context).scaffoldBackgroundColor, Theme.of(context).colorScheme.surface],
           ),
         ),
         child: Column(
@@ -208,21 +208,21 @@ class _BookingScreenState extends State<BookingScreen> {
             },
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
-                color: AppTheme.accentColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
                 shape: BoxShape.circle,
               ),
               selectedDecoration: BoxDecoration(
-                color: AppTheme.accentColor,
+                color: Theme.of(context).colorScheme.primary,
                 shape: BoxShape.circle,
               ),
-              disabledTextStyle: TextStyle(color: AppTheme.textSecondaryColor.withOpacity(0.3)),
+              disabledTextStyle: TextStyle(color: Theme.of(context).disabledColor.withOpacity(0.5)), // Or Theme.of(context).colorScheme.onSurface.withOpacity(0.38)
             ),
             headerStyle: HeaderStyle(
               formatButtonDecoration: BoxDecoration(
-                color: AppTheme.accentColor,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(20.0),
               ),
-              formatButtonTextStyle: TextStyle(color: Colors.white),
+              formatButtonTextStyle: TextStyle(color: Colors.white), // Assuming primary color contrasts with white
             ),
           ),
         );
@@ -262,15 +262,15 @@ class _BookingScreenState extends State<BookingScreen> {
             onPressed: () => setState(() => _selectedTime = slot),
             child: Container(
               decoration: BoxDecoration(
-                color: isSelected ? AppTheme.accentColor : AppTheme.surfaceColor,
+                color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceVariant,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isSelected ? AppTheme.accentColor : AppTheme.textSecondaryColor.withOpacity(0.5)),
+                border: Border.all(color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.outline),
               ),
               child: Center(
                 child: Text(
                   slot.format(context),
                   style: TextStyle(
-                    color: isSelected ? AppTheme.textColor : AppTheme.textSecondaryColor,
+                    color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -289,7 +289,7 @@ class _BookingScreenState extends State<BookingScreen> {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: Theme.of(context).colorScheme.surface, // For the bottom bar area
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)],
       ),
       child: Consumer<BookingProvider>(
@@ -299,7 +299,7 @@ class _BookingScreenState extends State<BookingScreen> {
             width: double.infinity,
             padding: EdgeInsets.symmetric(vertical: 16),
             decoration: BoxDecoration(
-                color: AppTheme.accentColor,
+                color: Theme.of(context).colorScheme.primary, // For the button itself
                 borderRadius: BorderRadius.circular(25)
             ),
             child: Center(

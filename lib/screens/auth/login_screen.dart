@@ -49,7 +49,30 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _userRole = ModalRoute.of(context)?.settings.arguments as String?;
+    // Only attempt to set _userRole if it hasn't been set yet,
+    // or if arguments might have changed (though less common for this screen).
+    // The primary goal is to fetch it once.
+    if (_userRole == null) {
+      final Object? arguments = ModalRoute.of(context)?.settings.arguments;
+      if (arguments is String && (arguments == 'customer' || arguments == 'barber')) {
+        _userRole = arguments;
+      } else {
+        // Invalid or missing argument. This screen should not be reached without a valid role.
+        // Schedule navigation to occur after the current build cycle.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) { // Check if the widget is still in the tree.
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: Role not specified for login. Returning to role selection.'),
+                backgroundColor: Colors.redAccent,
+              ),
+            );
+            // Assuming '/role-selection' is a valid route name to go back to.
+            Navigator.popUntil(context, ModalRoute.withName('/role-selection'));
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -69,8 +92,8 @@ class _LoginScreenState extends State<LoginScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.primaryColor,
-              AppTheme.surfaceColor,
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).colorScheme.surface,
             ],
           ),
         ),
@@ -87,7 +110,7 @@ class _LoginScreenState extends State<LoginScreen>
                       Icon(
                         _userRole == 'customer' ? Icons.person : Icons.cut,
                         size: 80,
-                        color: AppTheme.accentColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       SizedBox(height: 20),
                       Text(
@@ -142,7 +165,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   _obscurePassword
                                       ? Icons.visibility
                                       : Icons.visibility_off,
-                                  color: AppTheme.textSecondaryColor,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -177,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
                                         valueColor: AlwaysStoppedAnimation<Color>(
-                                          AppTheme.textColor,
+                                          Theme.of(context).colorScheme.onPrimary,
                                         ),
                                       ),
                                     )
@@ -210,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     TextSpan(
                                       text: 'Sign Up',
                                       style: TextStyle(
-                                        color: AppTheme.accentColor,
+-                                        color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -249,12 +272,14 @@ class _LoginScreenState extends State<LoginScreen>
             : '/barber-dashboard';
         Navigator.pushReplacementNamed(context, route);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.errorMessage ?? 'Login failed. Please try again.'),
+              backgroundColor: Colors.redAccent, // Or Theme.of(context).colorScheme.error for theme consistency
+            ),
+          );
+        }
       }
     }
   }

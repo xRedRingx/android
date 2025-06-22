@@ -17,10 +17,10 @@ class AuthWrapper extends StatelessWidget {
         // While the app is first checking the auth state, show a loading screen.
         if (authProvider.isAuthLoading) {
           return Scaffold(
-            backgroundColor: AppTheme.primaryColor,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.ctaColor),
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
               ),
             ),
           );

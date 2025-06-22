@@ -15,16 +15,19 @@ class ThemeProvider extends ChangeNotifier {
   ThemeData getTheme(BuildContext context) {
     final brightness = MediaQuery.of(context).platformBrightness;
 
+    // AppTheme.setThemeMode will be removed from AppTheme.
+    // This method's utility is reduced if MaterialApp handles theme selection,
+    // but we preserve its logic for now, minus the static call.
     switch (_themeMode) {
       case ThemeMode.light:
-        AppTheme.setThemeMode(false);
+        // AppTheme.setThemeMode(false); // REMOVED
         return AppTheme.lightTheme;
       case ThemeMode.dark:
-        AppTheme.setThemeMode(true);
+        // AppTheme.setThemeMode(true); // REMOVED
         return AppTheme.darkTheme;
       case ThemeMode.system:
         final isDark = brightness == Brightness.dark;
-        AppTheme.setThemeMode(isDark);
+        // AppTheme.setThemeMode(isDark); // REMOVED
         return isDark ? AppTheme.darkTheme : AppTheme.lightTheme;
     }
   }

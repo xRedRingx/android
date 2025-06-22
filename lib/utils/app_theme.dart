@@ -21,23 +21,14 @@ class AppTheme {
   static const Color lightTextSecondaryColor = Color(0xFF3C3C43);
   static const Color lightTextBodyColor = Color(0xFF4A4A4A);
 
-  // --- DYNAMIC THEME GETTERS (these solve the static reference issue) ---
-  static Color get primaryColor => _isDarkMode ? darkPrimaryColor : lightPrimaryColor;
-  static Color get accentColor => _isDarkMode ? darkAccentColor : lightAccentColor;
-  static Color get surfaceColor => _isDarkMode ? darkSurfaceColor : lightSurfaceColor;
-  static Color get ctaColor => _isDarkMode ? darkCtaColor : lightCtaColor;
-  static Color get subtleColor => _isDarkMode ? darkSubtleColor : lightSubtleColor;
-  static Color get textColor => _isDarkMode ? darkTextColor : lightTextColor;
-  static Color get textSecondaryColor => _isDarkMode ? darkTextSecondaryColor : lightTextSecondaryColor;
-  static Color get textBodyColor => _isDarkMode ? darkTextBodyColor : lightTextBodyColor;
-
-  // Track current theme mode
-  static bool _isDarkMode = false;
-  static void setThemeMode(bool isDark) {
-    _isDarkMode = isDark;
-  }
+  // --- DYNAMIC THEME GETTERS REMOVED ---
+  // Widgets should use Theme.of(context) for dynamic theme properties.
+  // Example: Theme.of(context).primaryColor, Theme.of(context).colorScheme.secondary, etc.
 
   // --- THEMES ---
+  // The static _isDarkMode and setThemeMode are removed.
+  // Widgets should use Theme.of(context) to get theme properties.
+
   static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true, // Enable Material 3

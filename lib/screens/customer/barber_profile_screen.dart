@@ -56,7 +56,7 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.primaryColor, AppTheme.surfaceColor],
+            colors: [Theme.of(context).scaffoldBackgroundColor, Theme.of(context).colorScheme.surface],
           ),
         ),
         child: CustomScrollView(
@@ -90,7 +90,7 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       expandedHeight: 250.0,
-      backgroundColor: AppTheme.primaryColor,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
@@ -116,7 +116,7 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [AppTheme.accentColor.withOpacity(0.6), AppTheme.primaryColor.withOpacity(0.8)],
+                  colors: [Theme.of(context).colorScheme.primary.withOpacity(0.6), Theme.of(context).scaffoldBackgroundColor.withOpacity(0.8)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -128,8 +128,8 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 45,
-                    backgroundColor: AppTheme.surfaceColor.withOpacity(0.8),
-                    child: Icon(Icons.person, size: 50, color: AppTheme.accentColor),
+                    backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+                    child: Icon(Icons.person, size: 50, color: Theme.of(context).colorScheme.primary),
                   ),
                   SizedBox(height: 12),
                   Padding(
@@ -162,17 +162,17 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
                   final isSelected = _selectedServices.any((s) => s.id == service.id);
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
-                    color: isSelected ? AppTheme.accentColor.withOpacity(0.2) : AppTheme.surfaceColor,
+                    color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.2) : Theme.of(context).cardTheme.color,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
-                      side: BorderSide(color: isSelected ? AppTheme.accentColor : Colors.transparent, width: 2),
+                      side: BorderSide(color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 2),
                     ),
                     child: ListTile(
                       onTap: () => _toggleServiceSelection(service),
                       contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       title: Text(service.name, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                       subtitle: Text('${service.duration} min • \$${service.price.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyMedium),
-                      trailing: Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? AppTheme.accentColor : AppTheme.textSecondaryColor),
+                      trailing: Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                   );
                 },
@@ -245,7 +245,7 @@ class _BarberProfileScreenState extends State<BarberProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceColor,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)],
       ),
       child: Row(

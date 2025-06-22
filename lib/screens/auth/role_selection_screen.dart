@@ -72,9 +72,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppTheme.primaryColor,
-              AppTheme.surfaceColor,
-              AppTheme.primaryColor,
+              Theme.of(context).scaffoldBackgroundColor,
+              Theme.of(context).colorScheme.surface,
+              Theme.of(context).scaffoldBackgroundColor,
             ],
             stops: [0.0, 0.5, 1.0],
           ),
@@ -92,14 +92,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                       Container(
                         padding: EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentColor.withOpacity(0.2),
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: AppTheme.accentColor, width: 2),
+                          border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
                         ),
                         child: Icon(
                           Icons.content_cut,
                           size: 60,
-                          color: AppTheme.accentColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       SizedBox(height: 30),
@@ -110,7 +110,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                           fontWeight: FontWeight.w900,
                           foreground: Paint()
                             ..shader = LinearGradient(
-                              colors: [AppTheme.accentColor, Colors.pinkAccent],
+                              colors: [Theme.of(context).colorScheme.primary, Colors.pinkAccent],
                             ).createShader(Rect.fromLTWH(0.0, 0.0, 200.0, 70.0)),
                         ),
                       ),
@@ -118,7 +118,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                       Text(
                         'Connect • Book • Style',
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textSecondaryColor,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 18,
                           letterSpacing: 2,
                         ),
@@ -144,7 +144,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                         subtitle: 'Book appointments with barbers',
                         icon: Icons.person,
                         onTap: () => _navigateToAuth('customer'),
-                        color: AppTheme.accentColor,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                       SizedBox(height: 20),
                       _buildRoleCard(
@@ -181,7 +181,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
         width: double.infinity,
         padding: EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceColor,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withOpacity(0.3), width: 2),
           boxShadow: [

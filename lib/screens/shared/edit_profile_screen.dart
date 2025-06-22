@@ -83,14 +83,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit Profile'),
-        backgroundColor: AppTheme.surfaceColor,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.primaryColor, AppTheme.surfaceColor],
+            colors: [Theme.of(context).scaffoldBackgroundColor, Theme.of(context).colorScheme.surface],
           ),
         ),
         child: SingleChildScrollView(
@@ -105,11 +105,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: AppTheme.accentColor.withOpacity(0.2),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
                         child: Icon(
                           user?.role == UserRole.barber ? Icons.store : Icons.person,
                           size: 50,
-                          color: AppTheme.accentColor,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       Positioned(
@@ -117,9 +117,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         right: 0,
                         child: CircleAvatar(
                           radius: 18,
-                          backgroundColor: AppTheme.accentColor,
+                          backgroundColor: Theme.of(context).colorScheme.primary,
                           child: IconButton(
-                            icon: Icon(Icons.edit, color: AppTheme.textColor, size: 20),
+                            icon: Icon(Icons.edit, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                             onPressed: () {
                               // TODO: Implement image picking logic
                             },
@@ -157,7 +157,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     style: Theme.of(context).textTheme.bodyLarge,
                     decoration: InputDecoration(
                       labelText: 'Bio / Description',
-                      prefixIcon: Icon(Icons.info_outline, color: AppTheme.textSecondaryColor),
+                      prefixIcon: Icon(Icons.info_outline), // Rely on InputDecorationTheme
                     ),
                   ),
                   SizedBox(height: 16),
@@ -174,7 +174,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     width: double.infinity,
                     padding: EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentColor,
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(25),
                     ),
                     child: Center(
